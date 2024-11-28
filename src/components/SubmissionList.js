@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import getBaseURL from '../apiConfig';
 
 const SubmissionList = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -8,7 +9,7 @@ const SubmissionList = () => {
 
   const fetchSubmissions = async () => {
     try {
-      const response = await fetch('http://localhost:8001/form/submissions/');
+      const response = await fetch(`${getBaseURL()}/form/submissions/`)
       const data = await response.json();
       setSubmissions(data);
     } catch (error) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TextField, Button, Box, Typography, Container, Snackbar, Alert } from '@mui/material';
+import getBaseURL from '../apiConfig';
 
 const Form = () => {
   const [name, setName] = useState('');
@@ -27,11 +28,11 @@ const Form = () => {
     if (!validateForm()) {
         return; // Stop form submission if there are validation errors
       }
-      
+
     const formData = { name, email, product, signature };
   
     try {
-      const response = await fetch('http://localhost:8001/form/submissions/', {
+      const response = await fetch(`${getBaseURL()}/form/submissions/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
