@@ -71,13 +71,16 @@ const SubmissionList = () => {
               <strong>ID:</strong> {selectedSubmission.id}
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
-              <strong>Name:</strong> {selectedSubmission.title}
+              <strong>Name:</strong> {selectedSubmission.name}
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
-              <strong>Email:</strong> {selectedSubmission.body}
+              <strong>Email:</strong> {selectedSubmission.email}
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
-              <strong>Product:</strong> {selectedSubmission.body}
+              <strong>Product:</strong> {selectedSubmission.product}
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 1 }}>
+              <strong>Contact:</strong> {selectedSubmission.contact}
             </Typography>
           </DialogContent>
           <DialogActions>
