@@ -6,7 +6,6 @@ const Form = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [product, setProduct] = useState('');
-  const [signature, setSignature] = useState('');
   const [errorMessages, setErrorMessages] = useState({});
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -29,7 +28,7 @@ const Form = () => {
         return; // Stop form submission if there are validation errors
       }
 
-    const formData = { name, email, product, signature };
+    const formData = { name, email, product };
   
     try {
       const response = await fetch(`${getBaseURL()}/form/submissions/`, {
@@ -39,14 +38,13 @@ const Form = () => {
         },
         body: JSON.stringify(formData),
       });
-      const data = await response.json();
+      await response.json();
       if (response.ok) {
         setSnackbarMessage('Form submitted successfully!');
         setSnackbarSeverity('success');
         setName('');
         setEmail('');
         setProduct('');
-        setSignature('');
       } else {
         setSnackbarMessage('Failed to submit form.');
         setSnackbarSeverity('error');
