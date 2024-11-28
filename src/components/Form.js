@@ -39,7 +39,7 @@ const Form = () => {
         },
         body: JSON.stringify(formData),
       });
-      const data = await response.json();
+      await response.json();
       if (response.ok) {
         setSnackbarMessage('Form submitted successfully!');
         setSnackbarSeverity('success');
