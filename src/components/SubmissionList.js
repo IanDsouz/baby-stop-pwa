@@ -44,6 +44,7 @@ const SubmissionList = () => {
               <TableCell><strong>Name</strong></TableCell>
               <TableCell><strong>Email</strong></TableCell>
               <TableCell><strong>Product</strong></TableCell>
+              <TableCell><strong>Mobile</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -57,6 +58,7 @@ const SubmissionList = () => {
                 <TableCell>{submission.name}</TableCell>
                 <TableCell>{submission.email}</TableCell>
                 <TableCell>{submission.product}</TableCell>
+                <TableCell>{submission.mobile}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -80,7 +82,7 @@ const SubmissionList = () => {
               <strong>Product:</strong> {selectedSubmission.product}
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
-              <strong>Contact:</strong> {selectedSubmission.contact}
+              <strong>Mobile:</strong> {selectedSubmission.mobile}
             </Typography>
           </DialogContent>
           <DialogActions>
