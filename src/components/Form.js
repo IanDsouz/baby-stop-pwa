@@ -1,83 +1,133 @@
-import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Container, Snackbar, Alert, Card, CardContent } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { TextField, Button, Box, Typography, Container, Snackbar, Alert, Card, CardContent, Chip } from '@mui/material';
 import getBaseURL from '../apiConfig';
 
 const Form = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [contact, setContact] = useState('');
-  const [product, setProduct] = useState('');
-  const [date, setDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+  // State declarations
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    mobile: '',
+    product: '',
+    date: new Date().toISOString().split('T')[0], // default to today's date
   });
   const [errorMessages, setErrorMessages] = useState({});
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // Listen for online/offline events
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Handle form field changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Form validation
   const validateForm = () => {
-    let errors = {};
-    if (!name) errors.name = 'Name is required';
-    if (!email) errors.email = 'Email is required';
-    if (!contact) errors.contact = 'Contact is required';
-    if (!product) errors.product = 'Product is required';
-    if (!date) errors.date = 'Date is required';
-
+    const errors = {};
+    Object.keys(formData).forEach((key) => {
+      if (!formData[key]) errors[key] = `${key.charAt(0).toUpperCase() + key.slice(1)} is required`;
+    });
     setErrorMessages(errors);
     return Object.keys(errors).length === 0;
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    if (!validateForm()) {
-      return;
-    }
+    const { name, email, mobile, product, date } = formData;
 
-    const formData = { name, email, contact, product, date };
-
-    try {
-      const response = await fetch(`${getBaseURL()}/form/submissions/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+    if (!navigator.onLine) {
+      // Save form data locally when offline
+      savePendingRequest({ name, email, mobile, product, date });
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.sync.register('sync-form');
       });
-      await response.json();
-      if (response.ok) {
-        setSnackbarMessage('Form submitted successfully!');
-        setSnackbarSeverity('success');
-        setName('');
-        setEmail('');
-        setContact('');
-        setProduct('');
-        setDate('');
-      } else {
-        setSnackbarMessage('Failed to submit form.');
-        setSnackbarSeverity('error');
+      setSnackbar({
+        open: true,
+        message: 'Form saved! It will be submitted once online.',
+        severity: 'info',
+      });
+    } else {
+      try {
+        const response = await fetch(`${getBaseURL()}/form/submissions/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, mobile, product, date }),
+        });
+        if (response.ok) {
+          setSnackbar({
+            open: true,
+            message: 'Form submitted successfully!',
+            severity: 'success',
+          });
+          setFormData({ name: '', email: '', mobile: '', product: '', date: new Date().toISOString().split('T')[0] });
+        }
+      } catch (error) {
+        setSnackbar({
+          open: true,
+          message: 'Failed to submit the form.',
+          severity: 'error',
+        });
       }
-    } catch (error) {
-      setSnackbarMessage('Error connecting to server.');
-      setSnackbarSeverity('error');
     }
-    setOpenSnackbar(true);
   };
 
+  // Save pending requests locally
+  const savePendingRequest = (data) => {
+    const requests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
+    requests.push(data);
+    localStorage.setItem('pendingRequests', JSON.stringify(requests));
+  };
+
+  // Handle snackbar close
   const handleCloseSnackbar = () => {
-    setOpenSnackbar(false);
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   return (
     <Container maxWidth="md" sx={{ marginTop: 4 }}>
+      {/* Online/Offline Status Indicator */}
+      <Chip
+        label={isOnline ? 'Online' : 'Offline'}
+        color={isOnline ? 'success' : 'error'}
+        sx={{
+          position: 'fixed',
+          top: 10,
+          right: 16,
+          zIndex: 999,
+          fontWeight: 'bold',
+          fontSize: '16px',
+          padding: '8px 16px',
+        }}
+      />
+      
       <Card>
         <CardContent>
           <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', marginBottom: 2 }}>
             Preloved Equipment Disclaimer
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', marginBottom: 4 }}>
-            <img src="/babystoplogo.png" alt="Logo" style={{ width: 160, marginRight: 16, marginTop:5 }} />
+            <img src="/babystoplogo.png" alt="Logo" style={{ width: 160, marginRight: 16, marginTop: 5 }} />
             <Typography variant="body1" sx={{ textAlign: 'justify', lineHeight: 1.6 }}>
               Thank you for helping us in reusing preloved equipment. By completing the form below, you confirm 
               that you understand this item was donated to Babystop and has not undergone any quality 
@@ -89,64 +139,22 @@ const Form = () => {
           </Box>
 
           <form onSubmit={handleSubmit}>
-            <TextField
-              label="Name"
-              fullWidth
-              variant="outlined"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              error={!!errorMessages.name}
-              helperText={errorMessages.name}
-              sx={{ marginBottom: 2 }}
-            />
-
-            <TextField
-              label="Email"
-              fullWidth
-              variant="outlined"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              error={!!errorMessages.email}
-              helperText={errorMessages.email}
-              sx={{ marginBottom: 2 }}
-            />
-
-            <TextField
-              label="Contact"
-              fullWidth
-              variant="outlined"
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              error={!!errorMessages.contact}
-              helperText={errorMessages.contact}
-              sx={{ marginBottom: 2 }}
-            />
-
-            <TextField
-              label="Product"
-              fullWidth
-              variant="outlined"
-              value={product}
-              onChange={(e) => setProduct(e.target.value)}
-              error={!!errorMessages.product}
-              helperText={errorMessages.product}
-              sx={{ marginBottom: 2 }}
-            />
-
-            <TextField
-              label="Date"
-              type="date"
-              fullWidth
-              InputLabelProps={{
-                shrink: true,
-              }}
-              variant="outlined"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              error={!!errorMessages.date}
-              helperText={errorMessages.date}
-              sx={{ marginBottom: 2 }}
-            />
+            {['name', 'email', 'mobile', 'product', 'date'].map((field) => (
+              <TextField
+                key={field}
+                label={field.charAt(0).toUpperCase() + field.slice(1)}
+                name={field}
+                fullWidth
+                variant="outlined"
+                value={formData[field]}
+                onChange={handleChange}
+                error={!!errorMessages[field]}
+                helperText={errorMessages[field]}
+                sx={{ marginBottom: 2 }}
+                type={field === 'date' ? 'date' : 'text'}
+                InputLabelProps={field === 'date' ? { shrink: true } : {}}
+              />
+            ))}
 
             <Button
               type="submit"
@@ -166,12 +174,12 @@ const Form = () => {
       </Card>
 
       <Snackbar
-        open={openSnackbar}
+        open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-          {snackbarMessage}
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
         </Alert>
       </Snackbar>
     </Container>
