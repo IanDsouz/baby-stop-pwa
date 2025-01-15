@@ -1,6 +1,6 @@
 const getBaseURL = () => {
     return window.location.hostname === 'localhost'
-      ? 'http://localhost:8001'
+      ? 'http://127.0.0.1:8080'
       : 'https://baby-stop-7sfsf.ondigitalocean.app';
   };
   
