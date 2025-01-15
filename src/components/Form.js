@@ -1,25 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Box, Typography, Container, Snackbar, Alert, Card, CardContent, Chip } from '@mui/material';
+import { TextField, Button, Box, Typography, Container, Snackbar, Alert, Card, CardContent, Chip, CircularProgress, Checkbox, FormControlLabel } from '@mui/material';
 import getBaseURL from '../apiConfig';
+import { openDB } from 'idb';
+
+const initDB = async () => {
+  return openDB('FormSyncDB', 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains('requests')) {
+        db.createObjectStore('requests', { keyPath: 'id', autoIncrement: true });
+      }
+    },
+  });
+};
 
 const Form = () => {
-  // State declarations
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     mobile: '',
     product: '',
-    date: new Date().toISOString().split('T')[0], // default to today's date
+    date: new Date().toISOString().split('T')[0], 
+    consent: false,
   });
   const [errorMessages, setErrorMessages] = useState({});
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Listen for online/offline events
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -33,40 +40,54 @@ const Form = () => {
     };
   }, []);
 
-  // Handle form field changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  // Form validation
   const validateForm = () => {
     const errors = {};
+  
+    // Validate that all fields except 'consent' are filled
     Object.keys(formData).forEach((key) => {
-      if (!formData[key]) errors[key] = `${key.charAt(0).toUpperCase() + key.slice(1)} is required`;
+      if (key !== 'consent' && !formData[key]) {
+        errors[key] = `${key.charAt(0).toUpperCase() + key.slice(1)} is required`;
+      }
     });
+  
+    // Validate that 'consent' is checked (should be boolean true)
+    if (!formData.consent) {
+      setSnackbar({ open: true, message: 'Please click on the checkbox to continue.', severity: 'warning' });
+    }
+  
     setErrorMessages(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
+  const savePendingRequest = async (data) => {
+    const db = await initDB();
+    const id = new Date().getTime(); // Use a unique ID for the request
+    await db.add('requests', { id, ...data });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
+    setIsSubmitting(true);
+
     const { name, email, mobile, product, date } = formData;
 
     if (!navigator.onLine) {
-      // Save form data locally when offline
-      savePendingRequest({ name, email, mobile, product, date });
+      await savePendingRequest({ name, email, mobile, product, date });
       navigator.serviceWorker.ready.then((registration) => {
-        registration.sync.register('sync-form');
+        registration.sync.register('sync-form').catch((error) => {
+          console.error('Sync registration failed:', error);
+        });
       });
-      setSnackbar({
-        open: true,
-        message: 'Form saved! It will be submitted once online.',
-        severity: 'info',
-      });
+
+      setSnackbar({ open: true, message: 'Form saved! It will be submitted once online.', severity: 'info' });
+      setFormData({ name: '', email: '', mobile: '', product: '', date: new Date().toISOString().split('T')[0], consent: false });
     } else {
       try {
         const response = await fetch(`${getBaseURL()}/form/submissions/`, {
@@ -74,32 +95,19 @@ const Form = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, mobile, product, date }),
         });
+
         if (response.ok) {
-          setSnackbar({
-            open: true,
-            message: 'Form submitted successfully!',
-            severity: 'success',
-          });
-          setFormData({ name: '', email: '', mobile: '', product: '', date: new Date().toISOString().split('T')[0] });
+          setSnackbar({ open: true, message: 'Form submitted successfully!', severity: 'success' });
+          setFormData({ name: '', email: '', mobile: '', product: '', date: new Date().toISOString().split('T')[0], consent: false });
         }
       } catch (error) {
-        setSnackbar({
-          open: true,
-          message: 'Failed to submit the form.',
-          severity: 'error',
-        });
+        setSnackbar({ open: true, message: 'Failed to submit the form.', severity: 'error' });
       }
     }
+
+    setIsSubmitting(false);
   };
 
-  // Save pending requests locally
-  const savePendingRequest = (data) => {
-    const requests = JSON.parse(localStorage.getItem('pendingRequests')) || [];
-    requests.push(data);
-    localStorage.setItem('pendingRequests', JSON.stringify(requests));
-  };
-
-  // Handle snackbar close
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
@@ -120,21 +128,21 @@ const Form = () => {
           padding: '8px 16px',
         }}
       />
-      
-      <Card>
+
+      <Card sx={{ borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
-          <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', marginBottom: 2 }}>
+          <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 'bold', marginBottom: 2, color: 'primary.main' }}>
             Preloved Equipment Disclaimer
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', marginBottom: 4 }}>
             <img src="/babystoplogo.png" alt="Logo" style={{ width: 160, marginRight: 16, marginTop: 5 }} />
-            <Typography variant="body1" sx={{ textAlign: 'justify', lineHeight: 1.6 }}>
-              Thank you for helping us in reusing preloved equipment. By completing the form below, you confirm 
-              that you understand this item was donated to Babystop and has not undergone any quality 
-              or safety inspection. You agree it is your responsibility to examine this product 
-              before use and accept full responsibility and liability for its safety. Babystop holds 
-              no liability for this product. If found unfit, please dispose of it at your local 
-              recycling depot. Please note your personal information will only be used for our internal records
+            <Typography variant="body1" sx={{ textAlign: 'justify', lineHeight: 1.6, color: 'text.primary' }}>
+              Thank you for helping us in reusing preloved equipment. By completing the form below, you confirm
+              that you understand this item was donated to Babystop and has not undergone any quality
+              or safety inspection. You agree it is your responsibility to examine this product
+              before use and accept full responsibility and liability for its safety. Babystop holds
+              no liability for this product. If found unfit, please dispose of it at your local
+              recycling depot. Please note your personal information will only be used for our internal records.
             </Typography>
           </Box>
 
@@ -156,19 +164,47 @@ const Form = () => {
               />
             ))}
 
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              sx={{
-                padding: '12px',
-                fontWeight: 'bold',
-                fontSize: '16px',
-              }}
-            >
-              Submit
-            </Button>
+            {/* GDPR Consent Checkbox */}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="consent"
+                  checked={formData.consent}
+                  onChange={handleChange}
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" component="span">
+                  By submitting this form, you agree to our{' '}
+                  <a href="https://babystop.uk" target="_blank" style={{ textDecoration: 'underline', color: '#1976d2' }}>
+                    Privacy Policy
+                  </a>
+                </Typography>
+              }
+              sx={{ marginBottom: 2 }}
+            />
+
+            <Box sx={{ position: 'relative', textAlign: 'center', marginTop: 3 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                fullWidth
+                disabled={isSubmitting}
+                sx={{
+                  padding: '12px',
+                  fontWeight: 'bold',
+                  fontSize: '16px',
+                  position: 'relative',
+                  ':hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                }}
+              >
+                {isSubmitting ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Submit'}
+              </Button>
+            </Box>
           </form>
         </CardContent>
       </Card>
@@ -177,6 +213,7 @@ const Form = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
           {snackbar.message}

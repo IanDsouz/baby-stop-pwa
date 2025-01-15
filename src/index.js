@@ -2,7 +2,25 @@ import React from 'react';
 import ReactDOM from 'react-dom/client'; // Note that we use 'react-dom/client'
 import './index.css';
 import App from './App';
-import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import getBaseURL from './apiConfig';
+
+
+// Register the service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/service-worker.js')
+      .then((registration) => {
+        console.log('Service Worker registered with scopeee:', registration.scope);
+        if (registration.active) {
+          registration.active.postMessage({ type: 'SET_BASE_URL', baseURL: getBaseURL() });
+        }
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
+  });
+}
 
 // Create the root element
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -13,8 +31,3 @@ root.render(
     <App />
   </React.StrictMode>
 );
-
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://cra.link/PWA
-serviceWorkerRegistration.unregister();
