@@ -177,7 +177,7 @@ const Form = () => {
               label={
                 <Typography variant="body2" component="span">
                   By submitting this form, you agree to our{' '}
-                  <a href="https://babystop.uk" target="_blank" style={{ textDecoration: 'underline', color: '#1976d2' }}>
+                  <a href="https://babystop.uk" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: '#1976d2' }}>
                     Privacy Policy
                   </a>
                 </Typography>

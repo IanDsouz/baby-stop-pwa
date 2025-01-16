@@ -1,5 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, Chip } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Chip,
+} from '@mui/material';
 import { openDB } from 'idb';
 import getBaseURL from '../apiConfig';
 
@@ -24,8 +39,17 @@ const SubmissionList = () => {
     };
   }, []);
 
+  const fetchOfflineSubmissions = useCallback(async () => {
+    const db = await openDB('FormSyncDB', 1);
+    const data = await db.getAll('requests') || [];
 
-  const fetchSubmissions = async () => {
+    return data.map((submission) => ({
+      ...submission,
+      date_submitted: submission.date_submitted || new Date().toISOString(),
+    }));
+  }, []);
+
+  const fetchSubmissions = useCallback(async () => {
     if (isOnline) {
       try {
         const response = await fetch(`${getBaseURL()}/form/submissions/`);
@@ -39,21 +63,11 @@ const SubmissionList = () => {
       const offlineData = await fetchOfflineSubmissions();
       setOfflineSubmissions(offlineData);
     }
-  };
+  }, [isOnline, fetchOfflineSubmissions]);
 
-  const fetchOfflineSubmissions = async () => {
-    const db = await openDB('FormSyncDB', 1);
-    const data = await db.getAll('requests') || [];
-
-    return data.map((submission) => ({
-      ...submission,
-      date_submitted: submission.date_submitted || new Date().toISOString(),
-    }));
-  };
-  
   useEffect(() => {
     fetchSubmissions();
-  }, [isOnline]);
+  }, [fetchSubmissions]);
 
   const handleRowClick = (submission) => {
     setSelectedSubmission(submission);
@@ -67,17 +81,14 @@ const SubmissionList = () => {
 
   const formatDate = (isoDate) => {
     const date = new Date(isoDate);
-  
-    // Extract day, month, and year
     const day = date.getDate();
     const month = date.toLocaleString('en-GB', { month: 'short' });
     const year = date.getFullYear().toString().slice(-2);
-  
-    // Determine the ordinal suffix for the day
+
     const suffix = (day % 10 === 1 && day !== 11) ? 'st' :
                    (day % 10 === 2 && day !== 12) ? 'nd' :
                    (day % 10 === 3 && day !== 13) ? 'rd' : 'th';
-  
+
     return `${day}${suffix} ${month} ${year}`;
   };
 
@@ -100,7 +111,6 @@ const SubmissionList = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {/* Online Submissions */}
             {submissions.map((submission) => (
               <TableRow 
                 key={submission.id} 
@@ -118,8 +128,6 @@ const SubmissionList = () => {
                 </TableCell>
               </TableRow>
             ))}
-
-            {/* Offline Submissions */}
             {offlineSubmissions.map((submission) => (
               <TableRow 
                 key={submission.id} 
@@ -131,6 +139,7 @@ const SubmissionList = () => {
                 <TableCell>{submission.email}</TableCell>
                 <TableCell>{submission.product}</TableCell>
                 <TableCell>{submission.mobile}</TableCell>
+                <TableCell>{formatDate(submission.date_submitted)}</TableCell>
                 <TableCell>
                   <Chip label="Pending Sync" color="warning" size="small" />
                 </TableCell>
