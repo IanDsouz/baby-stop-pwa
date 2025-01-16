@@ -60,8 +60,10 @@ const SubmissionList = () => {
       }
     } else {
       console.log('Offline - fetching submissions from IndexedDB');
-      const offlineData = await fetchOfflineSubmissions();
-      setOfflineSubmissions(offlineData);
+      setTimeout(async () => {
+        const offlineData = await fetchOfflineSubmissions();
+        setOfflineSubmissions(offlineData);
+      }, 500);
     }
   }, [isOnline, fetchOfflineSubmissions]);
 
