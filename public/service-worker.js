@@ -26,7 +26,7 @@ async function syncFormData() {
     const pendingRequests = await getPendingRequests();
 
     for (const request of pendingRequests) {
-      const response = await fetch(`${baseURL}/form/submissions/`, {
+      const response = await fetch(`https://baby-stop-7sfsf.ondigitalocean.app/form/submissions/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
