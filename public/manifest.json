@@ -1,14 +1,20 @@
 {
   "short_name": "FormPWA",
-  "name": "Preloved Equipment Disclaimer",
+  "name": "BabyStop Disclaimer Form",
   "icons": [
     {
-      "src": "logo192.png",
+      "src": "babystoplogo.png",
       "type": "image/png",
       "sizes": "192x192"
+    },
+    {
+      "src": "babystoplogo.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1976d2"
