@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Box, Typography, Container, Snackbar, Alert, Card, CardContent, Chip, CircularProgress, Checkbox, FormControlLabel } from '@mui/material';
 import getBaseURL from '../apiConfig';
-import { openDB } from 'idb';
-
-const initDB = async () => {
-  return openDB('FormSyncDB', 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains('requests')) {
-        db.createObjectStore('requests', { keyPath: 'id', autoIncrement: true });
-      }
-    },
-  });
-};
+import { addPendingRequest } from '../db';
 
 const Form = () => {
   const [formData, setFormData] = useState({
@@ -65,9 +55,8 @@ const Form = () => {
   };
 
   const savePendingRequest = async (data) => {
-    const db = await initDB();
     const id = new Date().getTime(); // Use a unique ID for the request
-    await db.add('requests', { id, ...data });
+    await addPendingRequest({ id, ...data });
   };
 
   const handleSubmit = async (e) => {
