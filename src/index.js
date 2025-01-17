@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client'; // Note that we use 'react-dom/client'
+import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import getBaseURL from './apiConfig';
@@ -11,7 +11,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
-        console.log('Service Worker registered with scopeee:', registration.scope);
+        console.log('Service Worker registered with scope:', registration.scope);
         if (registration.active) {
           registration.active.postMessage({ type: 'SET_BASE_URL', baseURL: getBaseURL() });
         }

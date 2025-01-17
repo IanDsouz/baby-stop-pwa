@@ -15,8 +15,8 @@ import {
   Button,
   Chip,
 } from '@mui/material';
-import { openDB } from 'idb';
 import getBaseURL from '../apiConfig';
+import { getPendingRequests } from '../db';
 
 const SubmissionList = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -40,9 +40,7 @@ const SubmissionList = () => {
   }, []);
 
   const fetchOfflineSubmissions = useCallback(async () => {
-    const db = await openDB('FormSyncDB', 1);
-    const data = await db.getAll('requests') || [];
-
+    const data = await getPendingRequests();
     return data.map((submission) => ({
       ...submission,
       date_submitted: submission.date_submitted || new Date().toISOString(),
@@ -51,6 +49,7 @@ const SubmissionList = () => {
 
   const fetchSubmissions = useCallback(async () => {
     if (isOnline) {
+      console.log('in online')
       try {
         const response = await fetch(`${getBaseURL()}/form/submissions/`);
         const data = await response.json();
@@ -62,6 +61,7 @@ const SubmissionList = () => {
       console.log('Offline - fetching submissions from IndexedDB');
       setTimeout(async () => {
         const offlineData = await fetchOfflineSubmissions();
+        console.log('in timeout')
         setOfflineSubmissions(offlineData);
       }, 500);
     }
