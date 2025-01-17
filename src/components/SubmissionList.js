@@ -14,16 +14,22 @@ import {
   DialogActions,
   Button,
   Chip,
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import getBaseURL from '../apiConfig';
-import { getPendingRequests } from '../db';
+import { getPendingRequests, removeSyncedRequest } from '../db';
 
 const SubmissionList = () => {
   const [submissions, setSubmissions] = useState([]);
   const [offlineSubmissions, setOfflineSubmissions] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [open, setOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Monitor online/offline status
   useEffect(() => {
@@ -33,11 +39,19 @@ const SubmissionList = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Fetch initial unsynced record count
+    updateUnsyncedCount();
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const updateUnsyncedCount = async () => {
+    const requests = await getPendingRequests();
+    setUnsyncedCount(requests.length);
+  };
 
   const fetchOfflineSubmissions = useCallback(async () => {
     const data = await getPendingRequests();
@@ -47,9 +61,12 @@ const SubmissionList = () => {
     }));
   }, []);
 
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   const fetchSubmissions = useCallback(async () => {
     if (isOnline) {
-      console.log('in online')
       try {
         const response = await fetch(`${getBaseURL()}/form/submissions/`);
         const data = await response.json();
@@ -58,10 +75,8 @@ const SubmissionList = () => {
         console.error('Error fetching submissions:', error);
       }
     } else {
-      console.log('Offline - fetching submissions from IndexedDB');
       setTimeout(async () => {
         const offlineData = await fetchOfflineSubmissions();
-        console.log('in timeout')
         setOfflineSubmissions(offlineData);
       }, 500);
     }
@@ -80,6 +95,38 @@ const SubmissionList = () => {
     setOpen(false);
     setSelectedSubmission(null);
   };
+
+  const handleSync = async () => {
+    if (isOnline) {
+    setIsSyncing(true);
+    const unsyncedSubmissions = await getPendingRequests();
+
+    for (const submission of unsyncedSubmissions) {
+      try {
+        const response = await fetch(`${getBaseURL()}/form/submit/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submission),
+        });
+
+        if (response.ok) {
+          await removeSyncedRequest(submission.id);
+        } else {
+          console.error(`Failed to sync submission ID ${submission.id}`);
+        }
+      } catch (error) {
+        console.error('Error during sync:', error);
+      }
+    }
+
+    setIsSyncing(false);
+    await updateUnsyncedCount();
+    fetchSubmissions(); // Refresh the table
+  }
+  else {
+    setSnackbar({ open: true, message: 'Form submitted successfully!', severity: 'success' });
+  };
+}
 
   const formatDate = (isoDate) => {
     const date = new Date(isoDate);
@@ -100,6 +147,15 @@ const SubmissionList = () => {
         <Typography variant="h5" align="center" sx={{ padding: 2 }}>
           Submitted Forms
         </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSync}
+          disabled={!isOnline || isSyncing || unsyncedCount === 0}
+          sx={{ display: 'block', margin: '10px auto' }}
+        >
+          {isSyncing ? <CircularProgress size={20} color="inherit" /> : `Sync (${unsyncedCount})`}
+        </Button>
         <Table>
           <TableHead>
             <TableRow>
@@ -150,6 +206,17 @@ const SubmissionList = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
       {selectedSubmission && (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
