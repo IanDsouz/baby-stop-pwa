@@ -103,7 +103,7 @@ const SubmissionList = () => {
 
     for (const submission of unsyncedSubmissions) {
       try {
-        const response = await fetch(`${getBaseURL()}/form/submit/`, {
+        const response = await fetch(`${getBaseURL()}/form/submissions/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(submission),
