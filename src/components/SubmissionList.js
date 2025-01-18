@@ -59,11 +59,6 @@ const SubmissionList = () => {
     return `${maskedLocalPart}@${domain}`;
   };
   
-  const maskName = (name) => {
-    if (!name) return "";
-    return name.charAt(0) + "***" + name.charAt(name.length - 1);
-  };
-  
   const maskMobile = (mobile) => {
     if (!mobile) return "";
     return mobile.slice(0, 2) + "****" + mobile.slice(-2);
