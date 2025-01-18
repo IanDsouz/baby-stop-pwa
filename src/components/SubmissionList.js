@@ -53,6 +53,22 @@ const SubmissionList = () => {
     setUnsyncedCount(requests.length);
   };
 
+  const maskEmail = (email) => {
+    const [localPart, domain] = email.split("@");
+    const maskedLocalPart = localPart.slice(0, 2) + "***" + localPart.slice(-1);
+    return `${maskedLocalPart}@${domain}`;
+  };
+  
+  const maskName = (name) => {
+    if (!name) return "";
+    return name.charAt(0) + "***" + name.charAt(name.length - 1);
+  };
+  
+  const maskMobile = (mobile) => {
+    if (!mobile) return "";
+    return mobile.slice(0, 2) + "****" + mobile.slice(-2);
+  };
+
   const fetchOfflineSubmissions = useCallback(async () => {
     const data = await getPendingRequests();
     return data.map((submission) => ({
@@ -177,9 +193,9 @@ const SubmissionList = () => {
               >
                 <TableCell>{submission.id}</TableCell>
                 <TableCell>{submission.name}</TableCell>
-                <TableCell>{submission.email}</TableCell>
-                <TableCell>{submission.product}</TableCell>
-                <TableCell>{submission.mobile}</TableCell>
+              <TableCell>{maskEmail(submission.email)}</TableCell>
+              <TableCell>{submission.product}</TableCell>
+              <TableCell>{maskMobile(submission.mobile)}</TableCell>
                 <TableCell>{formatDate(submission.date_submitted)}</TableCell>
                 <TableCell>
                   <Chip label="Synced" color="success" size="small" />
@@ -194,9 +210,9 @@ const SubmissionList = () => {
               >
                 <TableCell>{submission.id}</TableCell>
                 <TableCell>{submission.name}</TableCell>
-                <TableCell>{submission.email}</TableCell>
+                <TableCell>{maskEmail(submission.email)}</TableCell>
                 <TableCell>{submission.product}</TableCell>
-                <TableCell>{submission.mobile}</TableCell>
+                <TableCell>{maskMobile(submission.mobile)}</TableCell>
                 <TableCell>{formatDate(submission.date_submitted)}</TableCell>
                 <TableCell>
                   <Chip label="Pending Sync" color="warning" size="small" />
@@ -229,13 +245,13 @@ const SubmissionList = () => {
               <strong>Name:</strong> {selectedSubmission.name}
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
-              <strong>Email:</strong> {selectedSubmission.email}
+              <strong>Email:</strong> {maskEmail(selectedSubmission.email)} 
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
               <strong>Product:</strong> {selectedSubmission.product}
             </Typography>
             <Typography variant="body1" sx={{ mt: 1 }}>
-              <strong>Mobile:</strong> {selectedSubmission.mobile}
+              <strong>Mobile:</strong> {maskMobile(selectedSubmission.mobile)}
             </Typography>
             {offlineSubmissions.some(s => s.id === selectedSubmission.id) && (
               <Typography variant="body2" sx={{ mt: 2, color: 'orange' }}>
