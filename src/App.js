@@ -10,7 +10,7 @@ const App = () => {
       <TabNavigation />
       <Routes>
         <Route path="/" element={<Form />} />
-        <Route path="/submissions" element={<SubmissionList />} />
+        {/* <Route path="/submissions" element={<SubmissionList />} /> */}
       </Routes>
     </Router>
   );
