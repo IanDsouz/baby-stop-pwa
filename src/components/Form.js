@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, Box, Typography, Container, Snackbar, Alert, Card, CardContent, Chip, CircularProgress, Checkbox, FormControlLabel } from '@mui/material';
 import getBaseURL from '../apiConfig';
-import { addPendingRequest } from '../db';
+import { addOrUpdatePendingRequest } from '../db';
 
 const Form = () => {
   const [formData, setFormData] = useState({
@@ -55,8 +55,8 @@ const Form = () => {
   };
 
   const savePendingRequest = async (data) => {
-    const id = new Date().getTime(); // Use a unique ID for the request
-    await addPendingRequest({ id, ...data });
+    const id = new Date().getTime();
+    await addOrUpdatePendingRequest({ id, ...data });
   };
 
   const handleSubmit = async (e) => {
@@ -69,13 +69,7 @@ const Form = () => {
 
     if (!navigator.onLine) {
       await savePendingRequest({ name, email, mobile, product, date });
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.sync.register('sync-form').catch((error) => {
-          console.error('Sync registration failed:', error);
-        });
-      });
-
-      setSnackbar({ open: true, message: 'Form saved! It will be submitted once online.', severity: 'info' });
+      setSnackbar({ open: true, message: 'Form saved! It will be submitted once online.', severity: 'success' });
       setFormData({ name: '', email: '', mobile: '', product: '', date: new Date().toISOString().split('T')[0], consent: false });
     } else {
       try {
