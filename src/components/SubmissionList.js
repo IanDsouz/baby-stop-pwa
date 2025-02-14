@@ -16,10 +16,11 @@ import {
   Chip,
   CircularProgress,
   Snackbar,
-  Alert
+  Alert,
+  TextField
 } from '@mui/material';
 import getBaseURL from '../apiConfig';
-import { getPendingRequests, removeSyncedRequest } from '../db';
+import { getPendingRequests, removeSyncedRequest, addOrUpdatePendingRequest } from '../db';
 
 const SubmissionList = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -30,6 +31,8 @@ const SubmissionList = () => {
   const [open, setOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState(null);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -47,6 +50,74 @@ const SubmissionList = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+
+  const handleDuplicate = () => {
+    if (!selectedSubmission) return;
+  
+    const duplicatedData = { ...selectedSubmission };
+    delete duplicatedData.id; // Remove ID to ensure a new entry
+  
+    setFormData(duplicatedData);
+    setEditMode(true); // Open edit form with duplicated data
+  };
+
+  const handleEdit = () => {
+    if (selectedSubmission) {
+      setFormData({ ...selectedSubmission });
+      setEditMode(true);
+      setOpen(false);
+    }
+  }
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const isDuplicating = !formData.id; // If there's no ID, it's a duplication or new entry
+      const method = isDuplicating ? "POST" : "PATCH"; // PATCH updates, POST duplicates/new
+      const url = isDuplicating
+        ? `${getBaseURL()}/form/submissions/`
+        : `${getBaseURL()}/form/submissions/${formData.id}/`;
+
+
+      if (!isOnline) {
+        await addOrUpdatePendingRequest({ ...formData, id: isDuplicating ? Date.now() : formData.id });
+        setSnackbar({ open: true, message: "Submission saved offline!", severity: "info" });
+        updateUnsyncedCount();
+        setOpen(false);
+        fetchSubmissions();
+        setEditMode(false);
+        setSelectedSubmission(null);
+        return;
+      }
+  
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+  
+      if (response.ok) {
+        fetchSubmissions(); 
+        setSelectedSubmission(null);
+        setEditMode(false);
+        setSnackbar({
+          open: true,
+          message: isDuplicating ? "Submission duplicated!" : "Submission saved!",
+          severity: "success",
+        });
+      } else {
+        setSnackbar({ open: true, message: "Error saving submission", severity: "error" });
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setSnackbar({ open: true, message: "Submission failed", severity: "error" });
+    }
+  };
 
   const updateUnsyncedCount = async () => {
     const requests = await getPendingRequests();
@@ -82,6 +153,10 @@ const SubmissionList = () => {
         const response = await fetch(`${getBaseURL()}/form/submissions/`);
         const data = await response.json();
         setSubmissions(data);
+      
+        const offlineData = await fetchOfflineSubmissions();
+        setOfflineSubmissions(offlineData)
+
       } catch (error) {
         console.error('Error fetching submissions:', error);
       }
@@ -130,12 +205,13 @@ const SubmissionList = () => {
       }
     }
 
+    setSnackbar({ open: true, message: `${unsyncedSubmissions.length} submissions synced online`, severity: 'success' });
     setIsSyncing(false);
     await updateUnsyncedCount();
-    fetchSubmissions(); // Refresh the table
+    fetchSubmissions();
   }
   else {
-    setSnackbar({ open: true, message: 'Form submitted successfully!', severity: 'success' });
+    setSnackbar({ open: true, message: 'Form will be submitted once online!', severity: 'error' });
   };
 }
 
@@ -180,24 +256,7 @@ const SubmissionList = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {submissions.map((submission) => (
-              <TableRow 
-                key={submission.id} 
-                onClick={() => handleRowClick(submission)}
-                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
-              >
-                <TableCell>{submission.id}</TableCell>
-                <TableCell>{submission.name}</TableCell>
-              <TableCell>{maskEmail(submission.email)}</TableCell>
-              <TableCell>{submission.product}</TableCell>
-              <TableCell>{maskMobile(submission.mobile)}</TableCell>
-                <TableCell>{formatDate(submission.date_submitted)}</TableCell>
-                <TableCell>
-                  <Chip label="Synced" color="success" size="small" />
-                </TableCell>
-              </TableRow>
-            ))}
-            {offlineSubmissions.map((submission) => (
+          {offlineSubmissions.map((submission) => (
               <TableRow 
                 key={submission.id} 
                 onClick={() => handleRowClick(submission)}
@@ -214,6 +273,24 @@ const SubmissionList = () => {
                 </TableCell>
               </TableRow>
             ))}
+            {submissions.map((submission, index ) => (
+              <TableRow 
+                key={submission.id} 
+                onClick={() => handleRowClick(submission)}
+                sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
+              >
+                <TableCell>{index +1}</TableCell>
+                <TableCell>{submission.name}</TableCell>
+              <TableCell>{maskEmail(submission.email)}</TableCell>
+              <TableCell>{submission.product}</TableCell>
+              <TableCell>{maskMobile(submission.mobile)}</TableCell>
+                <TableCell>{formatDate(submission.date_submitted)}</TableCell>
+                <TableCell>
+                  <Chip label="Synced" color="success" size="small" />
+                </TableCell>
+              </TableRow>
+            ))}
+
           </TableBody>
         </Table>
       </TableContainer>
@@ -228,6 +305,22 @@ const SubmissionList = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {editMode && (
+        <Dialog open={editMode} onClose={() => setEditMode(false)} fullWidth maxWidth="sm">
+          <DialogTitle>{formData?.id ? "Edit Submission" : "Duplicate Submission"}</DialogTitle>
+          <DialogContent>
+            <TextField label="Name" name="name" fullWidth value={formData.name} onChange={handleChange} sx={{ mt: 2 }} />
+            <TextField label="Email" name="email" fullWidth value={formData.email} onChange={handleChange} sx={{ mt: 2 }} />
+            <TextField label="Product" name="product" fullWidth value={formData.product} onChange={handleChange} sx={{ mt: 2 }} />
+            <TextField label="Mobile" name="mobile" fullWidth value={formData.mobile} onChange={handleChange} sx={{ mt: 2 }} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditMode(false)} variant="outlined">Cancel</Button>
+            <Button onClick={handleSubmit} variant="contained" color="primary">Save</Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {selectedSubmission && (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
@@ -255,6 +348,12 @@ const SubmissionList = () => {
             )}
           </DialogContent>
           <DialogActions>
+            <Button onClick={handleEdit} variant="contained" color="primary">
+              Edit
+            </Button>
+            <Button onClick={handleDuplicate} variant="contained" color="secondary">
+              Duplicate
+            </Button>
             <Button onClick={handleClose} variant="outlined">Close</Button>
           </DialogActions>
         </Dialog>

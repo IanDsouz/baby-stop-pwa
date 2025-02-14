@@ -16,9 +16,15 @@ export const initDB = async () => {
   }
 };
 
-export const addPendingRequest = async (request) => {
+// export const addPendingRequest = async (request) => {
+//   const db = await initDB();
+//   await db.add('requests', request);
+// };
+
+// Add or update a request (Handles both new and edited requests)
+export const addOrUpdatePendingRequest = async (request) => {
   const db = await initDB();
-  await db.add('requests', request);
+  await db.put('requests', request);
 };
 
 export const getPendingRequests = async () => {
