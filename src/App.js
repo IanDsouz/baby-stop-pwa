@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import TabNavigation from './components/TabNavigation'; 
 import Form from './components/Form';
-// import SubmissionList from './components/SubmissionList';
+import SubmissionList from './components/SubmissionList';
 
 const App = () => {
   return (
@@ -10,7 +10,7 @@ const App = () => {
       <TabNavigation />
       <Routes>
         <Route path="/" element={<Form />} />
-        {/* <Route path="/submissions" element={<SubmissionList />} /> */}
+        <Route path="/submissions" element={<SubmissionList />} />
       </Routes>
     </Router>
   );
