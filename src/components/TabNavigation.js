@@ -18,7 +18,7 @@ const TabNavigation = () => {
     <Box sx={{ width: '100%', bgcolor: 'background.paper', boxShadow: 1 }}>
       <Tabs value={value} onChange={handleChange} centered>
         <Tab label="Form" />
-        <Tab label="Submissions" />
+        {/* <Tab label="Submissions" /> */}
       </Tabs>
     </Box>
   );
