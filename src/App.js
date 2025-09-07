@@ -5,12 +5,14 @@ import Form from './components/Form';
 import SubmissionList from './components/SubmissionList';
 
 const App = () => {
+  const showSubmissionsTab = process.env.REACT_APP_SHOW_SUBMISSIONS_TAB === 'true';
+  
   return (
     <Router>
       <TabNavigation />
       <Routes>
         <Route path="/" element={<Form />} />
-        <Route path="/submissions" element={<SubmissionList />} />
+        {showSubmissionsTab && <Route path="/submissions" element={<SubmissionList />} />}
       </Routes>
     </Router>
   );
