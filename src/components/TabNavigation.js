@@ -6,6 +6,7 @@ const TabNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const showSubmissionsTab = process.env.REACT_APP_SHOW_SUBMISSIONS_TAB === 'true';
   const tabIndex = location.pathname === '/submissions' ? 1 : 0;
   const [value, setValue] = useState(tabIndex);
 
@@ -18,7 +19,7 @@ const TabNavigation = () => {
     <Box sx={{ width: '100%', bgcolor: 'background.paper', boxShadow: 1 }}>
       <Tabs value={value} onChange={handleChange} centered>
         <Tab label="Form" />
-        <Tab label="Submissions" />
+        {showSubmissionsTab && <Tab label="Submissions" />}
       </Tabs>
     </Box>
   );
