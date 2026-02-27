@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Box, Typography, Container, Snackbar, Alert, Card, CardContent, Chip, CircularProgress, Checkbox, FormControlLabel } from '@mui/material';
+import { TextField, Button, Box, Typography, Container, Alert, Card, CardContent, Chip, CircularProgress, Checkbox, FormControlLabel, Link, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import getBaseURL from '../apiConfig';
 import { addOrUpdatePendingRequest } from '../db';
 
-const Form = () => {
+const Form = ({ isAdmin, onAdminLoginClick }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     mobile: '',
     product: '',
@@ -41,9 +43,23 @@ const Form = () => {
     // Validate that all fields except 'consent' are filled
     Object.keys(formData).forEach((key) => {
       if (key !== 'consent' && !formData[key]) {
-        errors[key] = `${key.charAt(0).toUpperCase() + key.slice(1)} is required`;
+        if (key === 'firstName') {
+          errors[key] = 'First name is required';
+        } else if (key === 'lastName') {
+          errors[key] = 'Last name is required';
+        } else {
+          errors[key] = `${key.charAt(0).toUpperCase() + key.slice(1)} is required`;
+        }
       }
     });
+
+    // Basic email format validation
+    if (formData.email) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(formData.email)) {
+        errors.email = 'Please enter a valid email address';
+      }
+    }
   
     // Validate that 'consent' is checked (should be boolean true)
     if (!formData.consent) {
@@ -65,12 +81,21 @@ const Form = () => {
 
     setIsSubmitting(true);
 
-    const { name, email, mobile, product, date } = formData;
+    const { firstName, lastName, email, mobile, product, date } = formData;
+    const name = `${firstName} ${lastName}`.trim();
 
     if (!navigator.onLine) {
       await savePendingRequest({ name, email, mobile, product, date });
       setSnackbar({ open: true, message: 'Form saved! It will be submitted once online.', severity: 'success' });
-      setFormData({ name: '', email: '', mobile: '', product: '', date: new Date().toISOString().split('T')[0], consent: false });
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        mobile: '',
+        product: '',
+        date: new Date().toISOString().split('T')[0],
+        consent: false,
+      });
     } else {
       try {
         const response = await fetch(`${getBaseURL()}/form/submissions/`, {
@@ -81,7 +106,15 @@ const Form = () => {
 
         if (response.ok) {
           setSnackbar({ open: true, message: 'Form submitted successfully!', severity: 'success' });
-          setFormData({ name: '', email: '', mobile: '', product: '', date: new Date().toISOString().split('T')[0], consent: false });
+          setFormData({
+            firstName: '',
+            lastName: '',
+            email: '',
+            mobile: '',
+            product: '',
+            date: new Date().toISOString().split('T')[0],
+            consent: false,
+          });
         }
       } catch (error) {
         setSnackbar({ open: true, message: 'Failed to submit the form.', severity: 'error' });
@@ -97,20 +130,38 @@ const Form = () => {
 
   return (
     <Container maxWidth="md" sx={{ marginTop: 4 }}>
-      {/* Online/Offline Status Indicator */}
-      <Chip
-        label={isOnline ? 'Online' : 'Offline'}
-        color={isOnline ? 'success' : 'error'}
+      {/* Online/Offline Status Indicator + Admin Login */}
+      <Box
         sx={{
           position: 'fixed',
           top: 10,
           right: 16,
           zIndex: 999,
-          fontWeight: 'bold',
-          fontSize: '16px',
-          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
         }}
-      />
+      >
+        <Chip
+          label={isOnline ? 'Online' : 'Offline'}
+          color={isOnline ? 'success' : 'error'}
+          sx={{
+            fontWeight: 'bold',
+            fontSize: '16px',
+            padding: '8px 16px',
+          }}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={onAdminLoginClick}
+          disabled={isAdmin}
+          sx={{ whiteSpace: 'nowrap' }}
+        >
+          {isAdmin ? 'Active' : 'Login'}
+        </Button>
+      </Box>
 
       <Card sx={{ borderRadius: 2, boxShadow: 3 }}>
         <CardContent>
@@ -130,7 +181,38 @@ const Form = () => {
           </Box>
 
           <form onSubmit={handleSubmit}>
-            {['name', 'email', 'mobile', 'product', 'date'].map((field) => (
+            {/* First and Last Name on the same line */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                mb: 2,
+              }}
+            >
+              <TextField
+                label="First name"
+                name="firstName"
+                fullWidth
+                variant="outlined"
+                value={formData.firstName}
+                onChange={handleChange}
+                error={!!errorMessages.firstName}
+                helperText={errorMessages.firstName}
+              />
+              <TextField
+                label="Last name"
+                name="lastName"
+                fullWidth
+                variant="outlined"
+                value={formData.lastName}
+                onChange={handleChange}
+                error={!!errorMessages.lastName}
+                helperText={errorMessages.lastName}
+              />
+            </Box>
+
+            {['email', 'mobile', 'product', 'date'].map((field) => (
               <TextField
                 key={field}
                 label={field.charAt(0).toUpperCase() + field.slice(1)}
@@ -142,7 +224,7 @@ const Form = () => {
                 error={!!errorMessages[field]}
                 helperText={errorMessages[field]}
                 sx={{ marginBottom: 2 }}
-                type={field === 'date' ? 'date' : 'text'}
+                type={field === 'date' ? 'date' : field === 'email' ? 'email' : 'text'}
                 InputLabelProps={field === 'date' ? { shrink: true } : {}}
               />
             ))}
@@ -160,9 +242,13 @@ const Form = () => {
               label={
                 <Typography variant="body2" component="span">
                   By submitting this form, you agree to our{' '}
-                  <a href="https://babystop.uk" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: '#1976d2' }}>
+                  <Link
+                    component={RouterLink}
+                    to="/privacy-policy"
+                    sx={{ textDecoration: 'underline', color: '#1976d2' }}
+                  >
                     Privacy Policy
-                  </a>
+                  </Link>
                 </Typography>
               }
               sx={{ marginBottom: 2 }}
@@ -192,16 +278,30 @@ const Form = () => {
         </CardContent>
       </Card>
 
-      <Snackbar
+      <Dialog
         open={snackbar.open}
-        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        fullWidth
+        maxWidth="sm"
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        <DialogTitle>
+          {snackbar.severity === 'success'
+            ? 'Thank you!'
+            : snackbar.severity === 'warning'
+            ? 'Please check'
+            : 'Something went wrong'}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseSnackbar} variant="contained" color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
