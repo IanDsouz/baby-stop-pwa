@@ -86,7 +86,7 @@ const Form = ({ isAdmin, onAdminLoginClick }) => {
 
     if (!navigator.onLine) {
       await savePendingRequest({ name, email, mobile, product, date });
-      setSnackbar({ open: true, message: 'Form saved! It will be submitted once online.', severity: 'success' });
+      setSnackbar({ open: true, message: 'Form Submitted Successfully!', severity: 'success' });
       setFormData({
         firstName: '',
         lastName: '',
